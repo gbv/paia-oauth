@@ -1,0 +1,20 @@
+/* navbar stays on top */
+.navbar-fixed-top {
+  border-bottom: 2px solid  #E2001A;
+}
+body {
+  padding-top: 70px;
+}
+
+/* logo */
+.navbar-brand > img {
+  width: 50px;
+  margin-top: -15px;
+}
+
+footer {
+  border-top: 2px solid #E2001A;
+  margin: 1em 0em 1em 0em;
+  font-size: 0.9em;
+  padding: 0.5em 1em;
+}
