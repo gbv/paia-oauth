@@ -2,7 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="de"><head> 
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Benutzerkonto</title>
+  
+  <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> 
+  <script src="jquery.tocify.min.js""></script>
+
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> 
+  <link rel="stylesheet" href="jquery.tocify.css" />
   <link href="paia.css" rel="stylesheet">
  </head>
  <body>
@@ -30,28 +37,48 @@
       </div>
     </div>
   </nav>
-  <div class="container">
-
-<h1 id="oauth-für-paia">OAuth für PAIA</h1>
-<p>Dieses Repository enthält Informationen zur Erweiterung der <a href="https://gbv.github.com/paia/">PAIA-Spezifikation</a> und des <a href="https://www.gbv.de/wikis/cls/PAIA">PAIA-Service der VZG</a> um <a href="http://tools.ietf.org/html/rfc6749">OAuth 2.0</a> (RFC 6749).</p>
-<p>Mittels OAuth 2.0 kann Anwendungen gezielt Zugriff auf (ggf. einzelne Funktionen von) Benutzerkonten gewährt und das Benutzerkonto zum Single-Sign-On genutzt werden.</p>
+  <div class="container-fluid">
+  <div class="row">
+    <div class="col-md-3"><div id="affix"><div id="toc"></div></div></div>
+    <div class="col-md-9"><h1 id="oauth-für-paia">OAuth für PAIA</h1>
+<p><a href="https://github.com/gbv/paia-oauth">Dieses Repository</a> enthält Informationen zu möglichen Erweiterungen der <a href="https://gbv.github.com/paia/">PAIA-Spezifikation</a> und des <a href="https://www.gbv.de/wikis/cls/PAIA">PAIA-Service der VZG</a> um weitere Funktionen von <a href="http://tools.ietf.org/html/rfc6749">OAuth 2.0</a> (RFC 6749) und ggf. <a href="http://openid.net/connect/">OpenID Connect</a>.</p>
+<p>Mittels OAuth 2.0 kann Anwendungen gezielt <strong>Zugriff auf einzelne Funktionen von Benutzerkonten</strong> gewährt und das Benutzerkonto zum Single-Sign-On (SSO) an anderen Anwendungen verwendet werden. Da es sich eher um ein Framework mit verschiedenen Möglichkeiten handelt, ist festzulegen, welche konkreten Funktionen von OAuth 2.0 in welcher Form benötigt werden. Ein mögliches Profil bietet OpenID Connect.</p>
+<p>PAIA-Spezifikation (ab 1.2.0) und PAIA-Server der VZG setzen bereits OAuth 2.0 in einer einfachen Variante (&quot;<a href="#password-grant">Password Grant</a>&quot;) um.</p>
 <h2 id="grundlagen">Grundlagen</h2>
-<p>In OAuth-Terminologie besteht der PAIA-Server aus einem <strong>Resource Server</strong> (PAIA core) und aus einem <strong>Authorization Server</strong> (PAIA auth). Der Resource Server bietet Zugriff auf Benutzerkonten mittels <strong>Access Tokens</strong>, die vom Authorization Server bereitgestellt werden. Access Tokens haben grundsätzlich eine begrenzte Gültigkeitsdauer und sind auf eine Menge von Zugriffsrechten (<strong>Scopes</strong>) beschränkt, beispielsweise um rein lesenden Zugriff auf ein Benutzerkonto zu ermöglichen. Die PAIA-Spezifikation definiert für PAIA core die <a href="https://gbv.github.io/paia/paia.html#access-tokens-and-scopes">scopes</a> <code>read_patron</code>, <code>read_fees</code>, <code>read_items</code> und <code>write_items</code>.</p>
-<p>Externe Dienste wie die BibApp oder ein Benachrichtigungsserver, die auf Funktionen des Benutzerkontos (PAIA core) zugreifen möchten, werden als Access Tokens zum Zugriff auf PAIA core benötigen, werden als <strong>Client</strong> oder im Folgenden als <strong>Anwendungen</strong> bezeichnet.</p>
-<h2 id="oauth-2.0">OAuth 2.0</h2>
-<p>Die OAuth 2.0 Spezifikation sieht je nach Anwendungsfall vier verschiedene Verfahren (<strong>Grants</strong>) vor, mit denen Anwendungen von PAIA auth an gültige Access Tokens zum Zugriff auf PAIA core kommen können:</p>
-<h3 id="resource-owner-password-credentials-grant">Resource Owner Password Credentials Grant</h3>
-<p>Beim <a href="http://tools.ietf.org/html/rfc6749#section-4.3">Resource Owner Password Credentials Grant</a> übergibt die Anwendung für jedes neue Access Token Benutzername und -passwort.</p>
+<p>In OAuth-Terminologie besteht der PAIA-Server aus einem <strong>Resource Server</strong> (<a href="http://gbv.github.io/paia/#paia-core">PAIA core</a>) und aus einem <strong>Authorization Server</strong> (<a href="http://gbv.github.io/paia/#paia-auth">PAIA auth</a>). Der Resource Server bietet Zugriff auf Benutzerkonten mittels <strong><a href="https://gbv.github.io/paia/#access-tokens-and-scopes">Access Tokens</a></strong>, die vom Authorization Server bereitgestellt werden.</p>
+<p>Access Tokens haben grundsätzlich eine begrenzte Gültigkeitsdauer und sind auf bestimmt Zugriffsrechten (<strong>Scopes</strong>) beschränkt. Für PAIA core sind die Scopes <code>read_patron</code>, <code>read_fees</code>, <code>read_items</code> und <code>write_items</code> möglich.</p>
+<p>OAuth 2.0 sieht verschiedene verschiedene Verfahren (<strong>Grants</strong>) vor, mit denen Anwendungen wie die BibApp oder ein Benachrichtigungsserver (<strong>Clients</strong>) an Access Tokens zum Zugriff auf PAIA core kommen können:</p>
+<ul>
+<li><a href="#password-grant">Password Grant</a></li>
+<li><a href="#client-credentials-grant">Client Credentials Grant</a></li>
+<li><a href="#authorization-code-grant">Authorization Code Grant</a></li>
+<li><a href="#implicit-grant">Implicit Grant</a></li>
+</ul>
+<p>Darüber hinaus können weitere Grants festgelegt werden. Im Wesentlichen basiert der Zugriff aus drei Teilen:</p>
+<pre><code> +--------+                                    +-------+
+ |        |-- (1) Grant-----------------------&gt;| PAIA  |
+ |        |&lt;--(2) Access Token ----------------| auth  |
+ |        |                                    +-------+
+ | Client |
+ |        |                                    +-------+
+ |        |-- (3) Zugriff mitt Access Token --&gt;| PAIA  |
+ |        |&lt;-----------------------------------| core  |
+ +--------+                                    +-------+</code></pre>
+<p>Abgesehen vom <a href="#password-grant">Password Grant</a> besteht der erste Teil (1) je nach Verfahren aus mehreren Schritten.</p>
+<h2 id="zugriffsverfahren-grants">Zugriffsverfahren (Grants)</h2>
+<h3 id="password-grant">Password Grant</h3>
+<p>Beim <a href="http://tools.ietf.org/html/rfc6749#section-4.3">Resource Owner Password Credentials Grant</a> übermittelt die Anwendung für jedes neue Access Token Benutzername und -passwort.</p>
 <p><strong>Vorteile</strong></p>
 <ul>
 <li>Einfach umzusetzen</li>
 <li>Nach Preisgabe von Nutzerbame und Passwort ist kein weiteres Eingreifen des Nutzers notwendig</li>
+<li>Anwendungen müssen nicht registriert werden</li>
 </ul>
 <p><strong>Nachteile</strong></p>
 <ul>
 <li>Jede Anwendung hat vollen Zugriff auf alle Funktionen</li>
 <li>Zugriff kann nicht widerrufen werden</li>
-<li>Potentiell unsicher</li>
+<li>Potentiell unsicher und daher nicht empfohlen</li>
 </ul>
 <p>Dieses Verfahren ist bereits seit Version 1.2.0 in der PAIA-Spezifikation enthalten (PAIA auth <a href="http://gbv.github.io/paia/paia.html#login">login</a>).</p>
 <h3 id="client-credentials-grant">Client Credentials Grant</h3>
@@ -63,7 +90,7 @@
 </ul>
 <p><strong>Nachteile</strong></p>
 <ul>
-<li>Die Anwendung muss irgendwie an ihre Zugangsdaten gelangen</li>
+<li>Die Anwendung muss auf Sicherem Wege an ihre Zugangsdaten gelangen</li>
 <li>Die Berechtigungen müsssen irgendwie verwaltet werden</li>
 <li>Potentiell unsicher</li>
 </ul>
@@ -155,14 +182,11 @@ grant_type=refresh_token
 <li>PAIA auth benötigt auch hier eine Benutzeroberfläche</li>
 <li>Umfangreicher zu Implementieren</li>
 </ul>
+<h2 id="weitere-funktionen">Weitere Funktionen</h2>
 <h3 id="token-revocation">Token Revocation</h3>
 <p>Zusätzlich sieht OAuth die Möglichkeit vor, das Anwendungen Tokens explizit als ungültig markieren können. Für den Passwort Grant entspricht dies in etwa der vorhandenen PAIA auth Methode logout. Im Detail ist diese Methode jedoch nicht entsprechend der OAUth-Spezifikation umgesetzt (siehe <a href="https://github.com/gbv/paia/issues/49">Issue der PAIA-Spezifikation</a>). Da Token Revocation optional ist, kann zunächst auf die Umsetztung verzichtet werden, zumal in der Praxis ggf. ausreicht, das Refresh Token zu löschen.</p>
-<h3 id="authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</h3>
-<p>Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification Server zusätzlich mit ihren <code>client_id</code> und <code>client_secret</code> per HTTP Basic authentification (RFC 2617) authentifizieren. Zur Not kann auch der Empfang der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt sein.</p>
-<h2 id="beispiel">Beispiel</h2>
-<p>Als Beispiel wird ein PAIA auth Server mit der Basis-URL <a href="https://paia.gbv.de/DE-Hil2/auth">https://paia.gbv.de/DE-Hil2/auth</a> und eine Anwendung mit der Basis-URL <a href="https://bibapp.de/notify/">https://bibapp.de/notify/</a> angenommen.</p>
 <h3 id="registrierung-von-anwendungen">Registrierung von Anwendungen</h3>
-<p>Jede Anwendung sollte zunächst am Authorization Server mit folgenden Angaben registriert werden:</p>
+<p>OAuth 2.0 selbst legt kein einheitliches Verfahren zur Registrierung von Anwendungen fest. Bei OpenID Connect ist hierfür eine eigene Funktion vorgesehen (&quot;OpenID Connect Dynamic Client Registration&quot;). In jedem Fall müssen Anwendungen zunächst am Authorization Server mit mindestens folgenden Angaben registriert werden:</p>
 <ul>
 <li>Name (z.B. &quot;Benachrichtigungsdienst&quot;)</li>
 <li>Logo (optional)</li>
@@ -172,6 +196,10 @@ grant_type=refresh_token
 </ul>
 <p>Bei der Registrierung erhält die Anwendung eine eindeutige, nicht geheime <code>client_id</code> und bei Bedarf ein <code>client_secret</code>.</p>
 <p><em>Es ist noch zu klären wie Anwendungen ohne allzu großen administrativen Aufwand registriert werden können. Unter Umständen können Nutzer selber Anwendungen vorschlagen, die für alle PAIA-Server freigeschaltet werden!</em></p>
+<h3 id="authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</h3>
+<p>Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification Server zusätzlich mit ihren <code>client_id</code> und <code>client_secret</code> per HTTP Basic authentification (RFC 2617) authentifizieren. Zur Not kann auch der Empfang der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt sein.</p>
+<h2 id="beispiel">Beispiel</h2>
+<p>Als Beispiel wird ein PAIA auth Server mit der Basis-URL <a href="https://paia.gbv.de/DE-Hil2/auth">https://paia.gbv.de/DE-Hil2/auth</a> und eine Anwendung mit der Basis-URL <a href="https://bibapp.de/notify/">https://bibapp.de/notify/</a> angenommen.</p>
 <h2 id="umsetzung">Umsetzung</h2>
 <p>Insgesamt ist OAuth 2.0 sehr komplex, es muss aber nicht in seiner Gänze umgesetzt werden. Vermutlich ist es am Besten zunächst den Authorization Code Grant umzusetzen, auch wenn dieses Verfahren das umfangreichste ist.</p>
 <p>Damit Nutzer Anwendungen authorisieren können, benötigt der PAIA-Server zunächst eine <strong>Benutzeroberfläche</strong> mit mindestens den folgenden Funktionen:</p>
@@ -192,7 +220,21 @@ grant_type=refresh_token
 <li>z.B. <a href="oauth-finanz.html">Finanzskript</a></li>
 </ul></li>
 </ul>
-
+<h2 id="siehe-auch">Siehe auch</h2>
+<ul>
+<li><p>Eine (noch komplexere) Alternative zu OAuth 2.0 ist SAML</p></li>
+<li><a href="https://en.wikipedia.org/wiki/OpenID_Connect">Wikipedia zu OpenID Connect</a></li>
+<li><p>Heise-Artikel zu OpenID Connect: <a href="http://www.heise.de/developer/artikel/OpenID-Connect-Login-mit-OAuth-Teil-1-Grundlagen-2218446.html">Teil 1</a>, <a href="http://www.heise.de/developer/artikel/OpenID-Connect-Login-mit-OAuth-Teil-2-Identity-Federation-und-fortgeschrittene-Themen-2266017.html">Teil 2</a></p></li>
+</ul></div>
+  </div>
+  <script>
+$(function() { 
+    $("#toc").tocify(); 
+    $("#affix").affix({
+        offset: { top: $('header').height() }
+    });
+}); 
+  </script>
   </div>
   <footer>
   </footer>
