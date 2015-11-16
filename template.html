@@ -2,7 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="de"><head> 
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Benutzerkonto</title>
+  
+  <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> 
+  <script src="jquery.tocify.min.js""></script>
+
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> 
+  <link rel="stylesheet" href="jquery.tocify.css" />
   <link href="paia.css" rel="stylesheet">
  </head>
  <body>
@@ -30,10 +37,23 @@
       </div>
     </div>
   </nav>
-  <div class="container">
-
-$body$
-
+  <div class="container-fluid">
+$if(toc)$
+  <div class="row">
+    <div class="col-md-3"><div id="affix"><div id="toc"></div></div></div>
+    <div class="col-md-9">$body$</div>
+  </div>
+  <script>
+$$(function() { 
+    $$("#toc").tocify(); 
+    $$("#affix").affix({
+        offset: { top: $$('header').height() }
+    });
+}); 
+  </script>
+$else$
+  $body$
+$endif$
   </div>
   <footer>
   </footer>
