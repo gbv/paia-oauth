@@ -42,18 +42,21 @@ Access Tokens zum Zugriff auf PAIA core kommen können:
 Darüber hinaus können weitere Grants festgelegt werden. Im Wesentlichen basiert
 der Zugriff aus drei Teilen:
 
-     +--------+                                    +-------+
-     |        |-- (1) Grant----------------------->| PAIA  |
-     |        |<--(2) Access Token ----------------| auth  |
-     |        |                                    +-------+
+     +--------+                               +----------------------+
+     |        |-- (1) Grant------------------>| Authorization Server |
+     |        |<--(2) Access Token -----------| (PAIA auth)          |
+     |        |                               +----------------------+
      | Client |
-     |        |                                    +-------+
-     |        |-- (3) Zugriff mitt Access Token -->| PAIA  |
-     |        |<-----------------------------------| core  |
-     +--------+                                    +-------+
+     |        |                                    +-----------------+
+     |        |-- (3) Zugriff mitt Access Token -->| Resource Server |
+     |        |<-----------------------------------| (PAIA core)     |
+     +--------+                                    +-----------------+
 
 Abgesehen vom [Password Grant] besteht der erste Teil (1) je nach Verfahren aus
-mehreren Schritten.
+mehreren Schritten in denen die Anwendung irgend einer Art von Zugangsdaten an
+den Authorization Server übermittelt. Dafür muss sie zunächst dem Authorization
+Server bekannt sein ([Registrierung von Anwendungen]) und sollte sich ihm gegenüber
+authentifizieren ([Authentifizierung von Anwendungen]).
 
 ## Zugriffsverfahren (Grants)
 
@@ -93,13 +96,15 @@ werden.
 
 **Nachteile**
 
-  * Die Anwendung muss auf Sicherem Wege an ihre Zugangsdaten gelangen
+  * Die Anwendung muss auf sicherem Weg an ihre Zugangsdaten gelangen
   * Die Berechtigungen müsssen irgendwie verwaltet werden
   * Potentiell unsicher
 
-Der Client Credentials Grant eignet sich am Besten für Anwendungen, die
-vom Nutzer auf seinem eigenen Rechner selber ausgeführt werden und bietet
-somit nur geringe Vorteile gegenüber dem Passwort Grant.
+Der Client Credentials Grant eignet sich am Besten für Anwendungen, die vom
+Nutzer auf seinem eigenen Rechner selber ausgeführt werden und bietet somit nur
+geringe Vorteile gegenüber dem Passwort Grant.  Client Credentials können
+allerdings zur [Authentifizierung von Anwendungen] *zusätzlich* zu anderen
+Verfahren verwendet werden.
 
 Im Beispiel ist dieses Verfahren [unter "Eigene
 Anwendungen"](oauth-applications.html) mit einem eigenen
@@ -140,7 +145,7 @@ der Praxis folgendermaßen ab:
    schon früher die benötigten Berechtigungen erteilt hat, erfolgt direkt eine
    Weiterleitung an die zur Anwendung hinterlegten REDIRECT_URL. Dabei werden
    im Fragment-Identifier der URL Access Token und weitere Felder mitgeschickt,
-   welche beim Passwort Grant als JSON-Objekt zurückgeliefert werden würden:
+   welche beim Password Grant als JSON-Objekt zurückgeliefert werden würden:
 
         https://bibapp.de/notify/callback#token_type=Bearer
           &scope=read_patron%20read_items
@@ -172,10 +177,34 @@ der Praxis folgendermaßen ab:
  
 ### Authorization Code Grant
 
-[Authorization Code Grant](http://tools.ietf.org/html/rfc6749#section-4.2)
-(aka "Web Server Flow") bietet die meisten Möglichkeiten, ist jedoch auch in
-der Implementierung umfangreicher. Das Verfahren läuft zunächst wie beim
-Implicit Grant ab:
+[Authorization Code Grant](http://tools.ietf.org/html/rfc6749#section-4.2) (aka
+"Web Server Flow") bietet die meisten Möglichkeiten, ist jedoch auch in der
+Implementierung umfangreicher. Der vollständige Ablauf ist hier dargestellt: 
+
+     +---------+                                          +---------------+
+     |         |---(1) client_id, redirect_uri & scope -->|               |
+     | Browser |---(2) Nutzer meldet sich an ------------>| Authorization |
+     |         |<--(3) Authorization Code ----------------|    Server     |
+     +---------+                                          |               |
+       ^    |                                             |  (PAIA auth)  |
+       |   (3)                                            |               |
+      (1)   |                                             |               |
+       |    v                                             |               |
+     +--------+                                           |               |
+     |        |---(4) Authorization Code ---------------->|               |
+     |        |<--(5) Access Token & Refresh Token -------|               |
+     | Client |                                           |               |
+     |        |---(8) Refresh Token --------------------->|               |
+     |        |<--(9) Access Token & ggf. Refresh Token --|               |
+     |        |                                           +---------------+
+     +--------+                                 
+        ^ |                                             +-----------------+
+        | \----(6) Access Token ----------------------->| Resource Server |
+        \------(7) Zugriff (bis Token abgelaufen) ------| (PAIA core)     |
+                                                        +-----------------+
+
+
+Das Verfahren läuft zunächst wie beim Implicit Grant ab:
 
 1. Anwendung schickt Nutzer an Authorization Server, allerdings mit einem
    anderen `response_type`:
@@ -186,68 +215,66 @@ Implicit Grant ab:
           &scope=read_patron%20read_items
           &state=...
 
-2. Nutzer muss sich ggf. anmelden
+2. Nutzer muss sich ggf. anmelden und beim ersten Zugriff die
+   Zugriffsberechtigung erteilen (siehe Beispiel-Mockup
+   [BibApp](oauth-bibapp.html), [Benachrichtigungsdienst](oauth-notify.html)
+   und [Campus-Community](oauth-campus.html)).
 
-3. Nutzer muss der Anwendung beim ersten Zugriff die Zugriffsberechtigung
-   erteilen.
-
-4. Der Authorization Server leitet den Nutzer an die REDIRECT_URL der
+3. Der Authorization Server leitet den Nutzer an die `redirect_uri` der
    Anwendung zurück, allerdings mit einem **Authorization Code**, der
    in der Query-Komponente der URL mitgeschickt wird: 
 
         https://bibapp.de/notify/callback?code=AUTH_CODE&state=...
 
-5. Im Fehlerfall wird der Fehler ebenfalls als Query-Parameter mitgeschickt:
+    Im Fehlerfall wird der Fehler ebenfalls als Query-Parameter mitgeschickt:
 
         https://bibapp.de/notify/callback?error=...
 
-6. Falls der Nutzer noch am Authorization Server angemeldet ist und
-   den Zugriff schon bestätigt hatte, bekommt er ebenso von der Transaktion
-   nichts mit.
+4. Der Authorization Code hat nur eine sehr begrenzte Gültigkeitsdauer und
+   dient lediglich dazu, ein erstes Access Token und ein **Refresh Token**
+   anzufordern.  Dies geschieht über die PAIA auth Methode login, allerdings 
+   mit einem anderen Anfrage-Parametern:
 
-Der Authorization Code hat nur eine sehr begrenzte Gültigkeitsdauer und dient
-lediglich dazu, ein erstes Access Token und ein **Refresh Token** anzufordern.
-Dies geschieht über die PAIA auth Methode login, allerdings mit einem anderen
-Anfrage-Parametern:
+        POST https://paia.gbv.de/DE.Hil2/login
+     
+        grant_type=authorization_code
+        &code=AUTH_CODE
+        &client_id=CLIENT_ID
+        &redirect_uri=REDIRECT_URI
 
-    POST https://paia.gbv.de/DE.Hil2/login
+    Die `redirect_uri` ist bei dieser Anfrage eigentlich überflüssig, da sie sich
+    bei [Registrierung von Anwendungen] aus der `client_id` ergibt, muss aber laut
+    Spezifikation nochmal mitgeschickt werden.
+
+5. Die Antwort des Authorization Server enthält im Erfolgsfall neben dem
+   Access Token eine Refresh Token:
+
+        {
+          "access_token": "...",
+          "token_type": "Bearer",
+          "expires_in": ...,
+          "refresh_token": "REFRESH_TOKEN"
+        }
+
+6. Die Anwendung hat wie bei den anderen Grants Zugriff per Access Token...
+
+7. ...bis das Access Token abgelaufen ist
+
+8. Das Refresh Token hat im Gegensatz zum Access Token eine lange Gültigkeit
+   (z.B. 1 Jahr) und wird nur benutzt um Access Token zu verlängern oder neue
+   Access Tokens anzufordern. Dies geschieht ebenfalls an der PAIA auth Methode
+   login. Auch hierbei wir empfohlen `client_id` und `client_secret` zur
+   [Authentifizierung von Anwendungen] mitzuschicken:
+
+        POST https://paia.gbv.de/DE.Hil2/login
     
-    grant_type=authorization_code
-    &code=AUTH_CODE
-    &client_id=CLIENT_ID
-    &redirect_uri=REDIRECT_URI
+        grant_type=refresh_token
+        &refresh_token=REFRESH_TOKEN
+        &scope=... (optional)
 
-Die REDIRECT_URI ist bei dieser Anfrage eigentlich überflüssig und die
-CLIENT_ID kann bei Authentifizierung von Anwendungen entfallen. Ist hat so
-spezifiziert.
-
-Die Antwort des Authorization Server enthält im Erfolgsfall zusätzlich zum
-Access Token eine Refresh Token:
-
-    {
-      "access_token": "...",
-      "token_type": "Bearer",
-      "expires_in": ...,
-      "refresh_token": "REFRESH_TOKEN"
-    }
-
-Das Refresh Token hat im Gegensatz zum Access Token eine lange Gültigkeit
-(z.B. 1 Jahr) und wird nur benutzt um Access Token zu verlängern oder neue
-Access Tokens anzufordern. Dies geschieht ebenfalls an der PAIA auth Methode
-login:
-
-    POST https://paia.gbv.de/DE.Hil2/login
-    
-    grant_type=refresh_token
-    &refresh_token=REFRESH_TOKEN
-    &scope=... (optional)
- 
-Auch hierbei wir empfohlen `client_id` und `client_secret` zur
-Authentifizierung der Anwendung mitzuschicken (siehe unten).
-
-Die Antwort enthält im Erfolgsfall mindestens ein Access Token (theoretisch 
-kann auch ein neues Refresh Token erstellt werden, ob das viel Sinn macht
-ist aber fraglich).
+9. Die Antwort enthält im Erfolgsfall ein Access Token und ggf. auch ein neues
+   Refresh Token. Refresh Tokens haben den Vorteil, dass sie nie an den Resource
+   Server geschickt und so weniger leicht kompromitiert werden können.
 
 **Vorteile**
 
@@ -257,6 +284,49 @@ ist aber fraglich).
 
   * PAIA auth benötigt auch hier eine Benutzeroberfläche
   * Umfangreicher zu Implementieren
+
+## Zusammenfassung
+
+Der [Password Grant] und [Client Credentials Grant] sind zwar am einfachsten
+umzusetzen, erfordern aber dass Anwendungen die Zugangsdaten sicher verwalten.
+Daher wird vom Einsatz abgeraten sofern die Anwendung nicht unter vollständiger
+Kontrolle des Nutzers läuft. Dies trifft auf mobile Endgeräte, im Gegensatz zu
+selbst administrierten Computern, strenggenommen nicht zu.
+
+## Anwendungen
+
+### Registrierung von Anwendungen
+
+OAuth 2.0 [fordert eine
+Registrierung](https://tools.ietf.org/html/rfc6749#section-2) von Anwendungen,
+legt dafür aber kein einheitliches Verfahren fest. Bei OpenID Connect ist
+hierfür eine eigene Funktion definiert ([RFC 7591]). Es ist also zu klären,
+wie Anwendungen ohne allzu großen administrativen Aufwand registriert werden 
+können. Sinnvoll wäre auch ein Verfahren, dass für mehrere PAIA-Server
+gleichzeitig funktioniert.
+
+In jedem Fall müssen Anwendungen zunächst am Authorization Server mit
+mindestens folgenden Angaben registriert werden:
+
+* Name (z.B. "Benachrichtigungsdienst")
+* Logo (optional)
+* Homepage-URL (optional)
+* Kurzbeschreibung (optional)
+* Redirect-URL (z.B. <https://bibapp.de/notify/callback>)
+
+Bei der Registrierung erhält die Anwendung eine eindeutige, nicht geheime
+`client_id` und bei Bedarf ein `client_secret`.
+
+### Authentifizierung von Anwendungen
+
+Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification
+Server zusätzlich mit ihren `client_id` und `client_secret` per HTTP Basic
+authentification ([RFC 2617]) authentifizieren. Zur Not kann auch der Empfang
+der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht
+empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei
+Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die
+REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt
+sein.
 
 ## Weitere Funktionen
 
@@ -270,37 +340,47 @@ PAIA-Spezifikation](https://github.com/gbv/paia/issues/49)). Da Token
 Revocation optional ist, kann zunächst auf die Umsetztung verzichtet werden,
 zumal in der Praxis ggf. ausreicht, das Refresh Token zu löschen.
 
-### Registrierung von Anwendungen
+### Authorisierung an anderem Identity Provider
 
-OAuth 2.0 selbst legt kein einheitliches Verfahren zur Registrierung von
-Anwendungen fest. Bei OpenID Connect ist hierfür eine eigene Funktion
-vorgesehen ("OpenID Connect Dynamic Client Registration").  In jedem Fall
-müssen Anwendungen zunächst am Authorization Server mit mindestens folgenden
-Angaben registriert werden:
+Obgleich es so scheinen mag, dient OAuth selbst *nicht der Authentifizierung
+oder Authorisierung* sondern deren Deligierung. In welcher Form der
+Authorization Server Nutzer authentifiziert und die gewünschten Berechtigungen
+bestätigt ist nicht festgelegt. Grundsätzlich sind Nutzer und Berechtigungen
+bei einem Identity Provider (IdP) hinterlegt, der im einfachsten Fall aus einer
+Nutzerdatenbank besteht.
 
-* Name (z.B. "Benachrichtigungsdienst")
-* Logo (optional)
-* Homepage-URL (optional)
-* Kurzbeschreibung (optional)
-* Redirect-URL (z.B. <https://bibapp.de/notify/callback>)
+Die Abfrage am IdP kann intern erfolgen:
 
-Bei der Registrierung erhält die Anwendung eine eindeutige, nicht geheime
-`client_id` und bei Bedarf ein `client_secret`.
 
-*Es ist noch zu klären wie Anwendungen ohne allzu großen administrativen
-Aufwand registriert werden können. Unter Umständen können Nutzer selber
-Anwendungen vorschlagen, die für alle PAIA-Server freigeschaltet werden!*
+     +---------+                                          +---------------+
+     |         |---(1) client_id, redirect_uri & scope -->| Authorization |
+     | Browser |---(2) Nutzer meldet sich an ------------>|   Server      |
+     |         |<--(3) Authorization Code ----------------|               |
+     +---------+                                          +---------------+
+       ^   |                                                 | interne ^
+       |   v                                                 v Abfrage |
+     +--------+                                        +------------------+
+     | Client |                                        | Identiy Provider |
+     +--------+                                        +------------------+
 
-### Authentifizierung von Anwendungen
 
-Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification
-Server zusätzlich mit ihren `client_id` und `client_secret` per HTTP Basic
-authentification (RFC 2617) authentifizieren. Zur Not kann auch der Empfang
-der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht
-empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei
-Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die
-REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt
-sein.
+Es ist aber denkbar, dass der Authorization Server den Nutzer direkt an den IdP
+weiterleitet, wo sich dieser die Anfrage bestätigt:
+
+     +---------+                                          +---------------+
+     |         |---(1) client_id, redirect_uri & scope -->| Authorization |
+     | Browser |<--(3) Authorization Code ----------------|   Server      |
+     |         |--\                                       |               |
+     +---------+  |                                       +---------------+
+       ^   |      |                                          |    ^
+       |   |      |                                Redirect (1)  (3) OK + patron
+       |   v      |                                          v    | 
+     +--------+   |                                    +------------------+
+     | Client |   \--(2) Nutzer meldet sich an ------->| Identiy Provider |
+     +--------+                                        +------------------+
+
+Hierbei muss jedoch sichergestellt werden dass dem Authorization Server
+kein scheinbar vom IdP stammendes gefälschtes "OK" untergeschoben werden kann.
 
 ## Beispiel
 
@@ -336,7 +416,7 @@ Für den Client Credential Grant käme hinzu:
 
 ## Siehe auch
 
-* Eine (noch komplexere) Alternative zu OAuth 2.0 ist SAML
+* Eine (noch komplexere) Alternative zu OAuth 2.0 ist SAML (z.B. Shibboleth)
 
 * [Wikipedia zu OpenID Connect](https://en.wikipedia.org/wiki/OpenID_Connect)
 * Heise-Artikel zu OpenID Connect: 
@@ -345,4 +425,6 @@ Für den Client Credential Grant käme hinzu:
 
 [OAuth 2.0]: http://tools.ietf.org/html/rfc6749
 [OpenID Connect]: http://openid.net/connect/
+[RFC 7591]: http://tools.ietf.org/html/rfc7591
+[RFC 2617]: http://tools.ietf.org/html/rfc2617
 

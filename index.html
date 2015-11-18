@@ -39,8 +39,8 @@
   </nav>
   <div class="container-fluid">
   <div class="row">
-    <div class="col-md-3"><div id="affix"><div id="toc"></div></div></div>
-    <div class="col-md-9"><h1 id="oauth-für-paia">OAuth für PAIA</h1>
+    <div class="col-md-4 hidden-sm hidden-xs"><div id="affix"><div id="toc"></div></div></div>
+    <div class="col-md-8"><h1 id="oauth-für-paia">OAuth für PAIA</h1>
 <p><a href="https://github.com/gbv/paia-oauth">Dieses Repository</a> enthält Informationen zu möglichen Erweiterungen der <a href="https://gbv.github.com/paia/">PAIA-Spezifikation</a> und des <a href="https://www.gbv.de/wikis/cls/PAIA">PAIA-Service der VZG</a> um weitere Funktionen von <a href="http://tools.ietf.org/html/rfc6749">OAuth 2.0</a> (RFC 6749) und ggf. <a href="http://openid.net/connect/">OpenID Connect</a>.</p>
 <p>Mittels OAuth 2.0 kann Anwendungen gezielt <strong>Zugriff auf einzelne Funktionen von Benutzerkonten</strong> gewährt und das Benutzerkonto zum Single-Sign-On (SSO) an anderen Anwendungen verwendet werden. Da es sich eher um ein Framework mit verschiedenen Möglichkeiten handelt, ist festzulegen, welche konkreten Funktionen von OAuth 2.0 in welcher Form benötigt werden. Ein mögliches Profil bietet OpenID Connect.</p>
 <p>PAIA-Spezifikation (ab 1.2.0) und PAIA-Server der VZG setzen bereits OAuth 2.0 in einer einfachen Variante (&quot;<a href="#password-grant">Password Grant</a>&quot;) um.</p>
@@ -55,16 +55,16 @@
 <li><a href="#implicit-grant">Implicit Grant</a></li>
 </ul>
 <p>Darüber hinaus können weitere Grants festgelegt werden. Im Wesentlichen basiert der Zugriff aus drei Teilen:</p>
-<pre><code> +--------+                                    +-------+
- |        |-- (1) Grant-----------------------&gt;| PAIA  |
- |        |&lt;--(2) Access Token ----------------| auth  |
- |        |                                    +-------+
+<pre><code> +--------+                               +----------------------+
+ |        |-- (1) Grant------------------&gt;| Authorization Server |
+ |        |&lt;--(2) Access Token -----------| (PAIA auth)          |
+ |        |                               +----------------------+
  | Client |
- |        |                                    +-------+
- |        |-- (3) Zugriff mitt Access Token --&gt;| PAIA  |
- |        |&lt;-----------------------------------| core  |
- +--------+                                    +-------+</code></pre>
-<p>Abgesehen vom <a href="#password-grant">Password Grant</a> besteht der erste Teil (1) je nach Verfahren aus mehreren Schritten.</p>
+ |        |                                    +-----------------+
+ |        |-- (3) Zugriff mitt Access Token --&gt;| Resource Server |
+ |        |&lt;-----------------------------------| (PAIA core)     |
+ +--------+                                    +-----------------+</code></pre>
+<p>Abgesehen vom <a href="#password-grant">Password Grant</a> besteht der erste Teil (1) je nach Verfahren aus mehreren Schritten in denen die Anwendung irgend einer Art von Zugangsdaten an den Authorization Server übermittelt. Dafür muss sie zunächst dem Authorization Server bekannt sein (<a href="#registrierung-von-anwendungen">Registrierung von Anwendungen</a>) und sollte sich ihm gegenüber authentifizieren (<a href="#authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</a>).</p>
 <h2 id="zugriffsverfahren-grants">Zugriffsverfahren (Grants)</h2>
 <h3 id="password-grant">Password Grant</h3>
 <p>Beim <a href="http://tools.ietf.org/html/rfc6749#section-4.3">Resource Owner Password Credentials Grant</a> übermittelt die Anwendung für jedes neue Access Token Benutzername und -passwort.</p>
@@ -90,15 +90,15 @@
 </ul>
 <p><strong>Nachteile</strong></p>
 <ul>
-<li>Die Anwendung muss auf Sicherem Wege an ihre Zugangsdaten gelangen</li>
+<li>Die Anwendung muss auf sicherem Weg an ihre Zugangsdaten gelangen</li>
 <li>Die Berechtigungen müsssen irgendwie verwaltet werden</li>
 <li>Potentiell unsicher</li>
 </ul>
-<p>Der Client Credentials Grant eignet sich am Besten für Anwendungen, die vom Nutzer auf seinem eigenen Rechner selber ausgeführt werden und bietet somit nur geringe Vorteile gegenüber dem Passwort Grant.</p>
+<p>Der Client Credentials Grant eignet sich am Besten für Anwendungen, die vom Nutzer auf seinem eigenen Rechner selber ausgeführt werden und bietet somit nur geringe Vorteile gegenüber dem Passwort Grant. Client Credentials können allerdings zur <a href="#authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</a> <em>zusätzlich</em> zu anderen Verfahren verwendet werden.</p>
 <p>Im Beispiel ist dieses Verfahren <a href="oauth-applications.html">unter &quot;Eigene Anwendungen&quot;</a> mit einem eigenen <a href="oauth-finanz.html">Konfigurationsformular</a> illustriert.</p>
 <h3 id="implicit-grant">Implicit Grant</h3>
 <p>Der <a href="http://tools.ietf.org/html/rfc6749#section-4.2">Implicit Grant</a> (aka &quot;User-Agent Flow&quot;) bietet sich für JavaScript-basierte Webanwendungen an. Ebenso wie beim folgenden Authorization Code Grant ist festgelegt wie Nutzer der Anwendung explizit Zugriffsrechte einräumen können. Das Verfahren läuft in der Praxis folgendermaßen ab:</p>
-<ol style="list-style-type: decimal">
+<ol type="1">
 <li><p>Um Zugriff auf ein Benutzerkonto zu erhalten, schickt die Anwendung den Nutzer im Webbrowser an den Authorization-Server und teilt mit, welche Berechtigungen (scopes) sie gerne hätte:</p>
 <pre><code>https://paia.gbv.de/DE-Hil2/oauth?response_type=token
   &amp;client_id=CLIENT_ID
@@ -112,7 +112,7 @@
 <li>z.B. <a href="oauth-notify.html">Benachrichtigungsdienst</a></li>
 <li>z.B. <a href="oauth-campus.html">Campus-Community</a></li>
 </ul></li>
-<li><p>Nach Bestätigung des Nutzes oder direkt, falls der Nutzer der Anwendung schon früher die benötigten Berechtigungen erteilt hat, erfolgt direkt eine Weiterleitung an die zur Anwendung hinterlegten REDIRECT_URL. Dabei werden im Fragment-Identifier der URL Access Token und weitere Felder mitgeschickt, welche beim Passwort Grant als JSON-Objekt zurückgeliefert werden würden:</p>
+<li><p>Nach Bestätigung des Nutzes oder direkt, falls der Nutzer der Anwendung schon früher die benötigten Berechtigungen erteilt hat, erfolgt direkt eine Weiterleitung an die zur Anwendung hinterlegten REDIRECT_URL. Dabei werden im Fragment-Identifier der URL Access Token und weitere Felder mitgeschickt, welche beim Password Grant als JSON-Objekt zurückgeliefert werden würden:</p>
 <pre><code>https://bibapp.de/notify/callback#token_type=Bearer
   &amp;scope=read_patron%20read_items
   &amp;access_token=...
@@ -134,45 +134,66 @@
 <li>Access Token sind nur schlecht gesichert (z.B. Browser-History)</li>
 </ul>
 <h3 id="authorization-code-grant">Authorization Code Grant</h3>
-<p><a href="http://tools.ietf.org/html/rfc6749#section-4.2">Authorization Code Grant</a> (aka &quot;Web Server Flow&quot;) bietet die meisten Möglichkeiten, ist jedoch auch in der Implementierung umfangreicher. Das Verfahren läuft zunächst wie beim Implicit Grant ab:</p>
-<ol style="list-style-type: decimal">
+<p><a href="http://tools.ietf.org/html/rfc6749#section-4.2">Authorization Code Grant</a> (aka &quot;Web Server Flow&quot;) bietet die meisten Möglichkeiten, ist jedoch auch in der Implementierung umfangreicher. Der vollständige Ablauf ist hier dargestellt:</p>
+<pre><code> +---------+                                          +---------------+
+ |         |---(1) client_id, redirect_uri &amp; scope --&gt;|               |
+ | Browser |---(2) Nutzer meldet sich an ------------&gt;| Authorization |
+ |         |&lt;--(3) Authorization Code ----------------|    Server     |
+ +---------+                                          |               |
+   ^    |                                             |  (PAIA auth)  |
+   |   (3)                                            |               |
+  (1)   |                                             |               |
+   |    v                                             |               |
+ +--------+                                           |               |
+ |        |---(4) Authorization Code ----------------&gt;|               |
+ |        |&lt;--(5) Access Token &amp; Refresh Token -------|               |
+ | Client |                                           |               |
+ |        |---(8) Refresh Token ---------------------&gt;|               |
+ |        |&lt;--(9) Access Token &amp; ggf. Refresh Token --|               |
+ |        |                                           +---------------+
+ +--------+                                 
+    ^ |                                             +-----------------+
+    | \----(6) Access Token -----------------------&gt;| Resource Server |
+    \------(7) Zugriff (bis Token abgelaufen) ------| (PAIA core)     |
+                                                    +-----------------+</code></pre>
+<p>Das Verfahren läuft zunächst wie beim Implicit Grant ab:</p>
+<ol type="1">
 <li><p>Anwendung schickt Nutzer an Authorization Server, allerdings mit einem anderen <code>response_type</code>:</p>
 <pre><code>https://paia.gbv.de/DE-Hil2/oauth?response_type=code
   &amp;client_id=CLIENT_ID
   &amp;redirect_uri=REDIRECT_URI
   &amp;scope=read_patron%20read_items
   &amp;state=...</code></pre></li>
-<li><p>Nutzer muss sich ggf. anmelden</p></li>
-<li><p>Nutzer muss der Anwendung beim ersten Zugriff die Zugriffsberechtigung erteilen.</p></li>
-<li><p>Der Authorization Server leitet den Nutzer an die REDIRECT_URL der Anwendung zurück, allerdings mit einem <strong>Authorization Code</strong>, der in der Query-Komponente der URL mitgeschickt wird:</p>
-<pre><code>https://bibapp.de/notify/callback?code=AUTH_CODE&amp;state=...</code></pre></li>
-<li><p>Im Fehlerfall wird der Fehler ebenfalls als Query-Parameter mitgeschickt:</p>
+<li><p>Nutzer muss sich ggf. anmelden und beim ersten Zugriff die Zugriffsberechtigung erteilen (siehe Beispiel-Mockup <a href="oauth-bibapp.html">BibApp</a>, <a href="oauth-notify.html">Benachrichtigungsdienst</a> und <a href="oauth-campus.html">Campus-Community</a>).</p></li>
+<li><p>Der Authorization Server leitet den Nutzer an die <code>redirect_uri</code> der Anwendung zurück, allerdings mit einem <strong>Authorization Code</strong>, der in der Query-Komponente der URL mitgeschickt wird:</p>
+<pre><code>https://bibapp.de/notify/callback?code=AUTH_CODE&amp;state=...</code></pre>
+<p>Im Fehlerfall wird der Fehler ebenfalls als Query-Parameter mitgeschickt:</p>
 <pre><code>https://bibapp.de/notify/callback?error=...</code></pre></li>
-<li><p>Falls der Nutzer noch am Authorization Server angemeldet ist und den Zugriff schon bestätigt hatte, bekommt er ebenso von der Transaktion nichts mit.</p></li>
-</ol>
-<p>Der Authorization Code hat nur eine sehr begrenzte Gültigkeitsdauer und dient lediglich dazu, ein erstes Access Token und ein <strong>Refresh Token</strong> anzufordern. Dies geschieht über die PAIA auth Methode login, allerdings mit einem anderen Anfrage-Parametern:</p>
+<li><p>Der Authorization Code hat nur eine sehr begrenzte Gültigkeitsdauer und dient lediglich dazu, ein erstes Access Token und ein <strong>Refresh Token</strong> anzufordern. Dies geschieht über die PAIA auth Methode login, allerdings mit einem anderen Anfrage-Parametern:</p>
 <pre><code>POST https://paia.gbv.de/DE.Hil2/login
 
 grant_type=authorization_code
 &amp;code=AUTH_CODE
 &amp;client_id=CLIENT_ID
 &amp;redirect_uri=REDIRECT_URI</code></pre>
-<p>Die REDIRECT_URI ist bei dieser Anfrage eigentlich überflüssig und die CLIENT_ID kann bei Authentifizierung von Anwendungen entfallen. Ist hat so spezifiziert.</p>
-<p>Die Antwort des Authorization Server enthält im Erfolgsfall zusätzlich zum Access Token eine Refresh Token:</p>
+<p>Die <code>redirect_uri</code> ist bei dieser Anfrage eigentlich überflüssig, da sie sich bei <a href="#registrierung-von-anwendungen">Registrierung von Anwendungen</a> aus der <code>client_id</code> ergibt, muss aber laut Spezifikation nochmal mitgeschickt werden.</p></li>
+<li><p>Die Antwort des Authorization Server enthält im Erfolgsfall neben dem Access Token eine Refresh Token:</p>
 <pre><code>{
   &quot;access_token&quot;: &quot;...&quot;,
   &quot;token_type&quot;: &quot;Bearer&quot;,
   &quot;expires_in&quot;: ...,
   &quot;refresh_token&quot;: &quot;REFRESH_TOKEN&quot;
-}</code></pre>
-<p>Das Refresh Token hat im Gegensatz zum Access Token eine lange Gültigkeit (z.B. 1 Jahr) und wird nur benutzt um Access Token zu verlängern oder neue Access Tokens anzufordern. Dies geschieht ebenfalls an der PAIA auth Methode login:</p>
+}</code></pre></li>
+<li><p>Die Anwendung hat wie bei den anderen Grants Zugriff per Access Token...</p></li>
+<li><p>...bis das Access Token abgelaufen ist</p></li>
+<li><p>Das Refresh Token hat im Gegensatz zum Access Token eine lange Gültigkeit (z.B. 1 Jahr) und wird nur benutzt um Access Token zu verlängern oder neue Access Tokens anzufordern. Dies geschieht ebenfalls an der PAIA auth Methode login. Auch hierbei wir empfohlen <code>client_id</code> und <code>client_secret</code> zur <a href="#authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</a> mitzuschicken:</p>
 <pre><code>POST https://paia.gbv.de/DE.Hil2/login
 
 grant_type=refresh_token
 &amp;refresh_token=REFRESH_TOKEN
-&amp;scope=... (optional)</code></pre>
-<p>Auch hierbei wir empfohlen <code>client_id</code> und <code>client_secret</code> zur Authentifizierung der Anwendung mitzuschicken (siehe unten).</p>
-<p>Die Antwort enthält im Erfolgsfall mindestens ein Access Token (theoretisch kann auch ein neues Refresh Token erstellt werden, ob das viel Sinn macht ist aber fraglich).</p>
+&amp;scope=... (optional)</code></pre></li>
+<li><p>Die Antwort enthält im Erfolgsfall ein Access Token und ggf. auch ein neues Refresh Token. Refresh Tokens haben den Vorteil, dass sie nie an den Resource Server geschickt und so weniger leicht kompromitiert werden können.</p></li>
+</ol>
 <p><strong>Vorteile</strong></p>
 <ul>
 <li>Tokens können verlängert werden, Nutzer muss nur einmal bestätigen</li>
@@ -182,11 +203,12 @@ grant_type=refresh_token
 <li>PAIA auth benötigt auch hier eine Benutzeroberfläche</li>
 <li>Umfangreicher zu Implementieren</li>
 </ul>
-<h2 id="weitere-funktionen">Weitere Funktionen</h2>
-<h3 id="token-revocation">Token Revocation</h3>
-<p>Zusätzlich sieht OAuth die Möglichkeit vor, das Anwendungen Tokens explizit als ungültig markieren können. Für den Passwort Grant entspricht dies in etwa der vorhandenen PAIA auth Methode logout. Im Detail ist diese Methode jedoch nicht entsprechend der OAUth-Spezifikation umgesetzt (siehe <a href="https://github.com/gbv/paia/issues/49">Issue der PAIA-Spezifikation</a>). Da Token Revocation optional ist, kann zunächst auf die Umsetztung verzichtet werden, zumal in der Praxis ggf. ausreicht, das Refresh Token zu löschen.</p>
+<h2 id="zusammenfassung">Zusammenfassung</h2>
+<p>Der <a href="#password-grant">Password Grant</a> und <a href="#client-credentials-grant">Client Credentials Grant</a> sind zwar am einfachsten umzusetzen, erfordern aber dass Anwendungen die Zugangsdaten sicher verwalten. Daher wird vom Einsatz abgeraten sofern die Anwendung nicht unter vollständiger Kontrolle des Nutzers läuft. Dies trifft auf mobile Endgeräte, im Gegensatz zu selbst administrierten Computern, strenggenommen nicht zu.</p>
+<h2 id="anwendungen">Anwendungen</h2>
 <h3 id="registrierung-von-anwendungen">Registrierung von Anwendungen</h3>
-<p>OAuth 2.0 selbst legt kein einheitliches Verfahren zur Registrierung von Anwendungen fest. Bei OpenID Connect ist hierfür eine eigene Funktion vorgesehen (&quot;OpenID Connect Dynamic Client Registration&quot;). In jedem Fall müssen Anwendungen zunächst am Authorization Server mit mindestens folgenden Angaben registriert werden:</p>
+<p>OAuth 2.0 <a href="https://tools.ietf.org/html/rfc6749#section-2">fordert eine Registrierung</a> von Anwendungen, legt dafür aber kein einheitliches Verfahren fest. Bei OpenID Connect ist hierfür eine eigene Funktion definiert (<a href="http://tools.ietf.org/html/rfc7591">RFC 7591</a>). Es ist also zu klären, wie Anwendungen ohne allzu großen administrativen Aufwand registriert werden können. Sinnvoll wäre auch ein Verfahren, dass für mehrere PAIA-Server gleichzeitig funktioniert.</p>
+<p>In jedem Fall müssen Anwendungen zunächst am Authorization Server mit mindestens folgenden Angaben registriert werden:</p>
 <ul>
 <li>Name (z.B. &quot;Benachrichtigungsdienst&quot;)</li>
 <li>Logo (optional)</li>
@@ -195,9 +217,37 @@ grant_type=refresh_token
 <li>Redirect-URL (z.B. <a href="https://bibapp.de/notify/callback">https://bibapp.de/notify/callback</a>)</li>
 </ul>
 <p>Bei der Registrierung erhält die Anwendung eine eindeutige, nicht geheime <code>client_id</code> und bei Bedarf ein <code>client_secret</code>.</p>
-<p><em>Es ist noch zu klären wie Anwendungen ohne allzu großen administrativen Aufwand registriert werden können. Unter Umständen können Nutzer selber Anwendungen vorschlagen, die für alle PAIA-Server freigeschaltet werden!</em></p>
 <h3 id="authentifizierung-von-anwendungen">Authentifizierung von Anwendungen</h3>
-<p>Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification Server zusätzlich mit ihren <code>client_id</code> und <code>client_secret</code> per HTTP Basic authentification (RFC 2617) authentifizieren. Zur Not kann auch der Empfang der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt sein.</p>
+<p>Es wird empfohlen, dass Anwendungen sich bei Anfragen an den Authentification Server zusätzlich mit ihren <code>client_id</code> und <code>client_secret</code> per HTTP Basic authentification (<a href="http://tools.ietf.org/html/rfc2617">RFC 2617</a>) authentifizieren. Zur Not kann auch der Empfang der beiden Felder im Request body unterstützt werden, dies wird jedoch nicht empfohlen. Ohne Authentifizierung der Anwendung können sich Angreifer bei Kenntnis der CLIENT_ID als andere Anwendung ausgeben -- deshalb sollten die REDIRECT_URL bei Anfragen nicht frei wählbar sondern pro Anwendung festgelegt sein.</p>
+<h2 id="weitere-funktionen">Weitere Funktionen</h2>
+<h3 id="token-revocation">Token Revocation</h3>
+<p>Zusätzlich sieht OAuth die Möglichkeit vor, das Anwendungen Tokens explizit als ungültig markieren können. Für den Passwort Grant entspricht dies in etwa der vorhandenen PAIA auth Methode logout. Im Detail ist diese Methode jedoch nicht entsprechend der OAUth-Spezifikation umgesetzt (siehe <a href="https://github.com/gbv/paia/issues/49">Issue der PAIA-Spezifikation</a>). Da Token Revocation optional ist, kann zunächst auf die Umsetztung verzichtet werden, zumal in der Praxis ggf. ausreicht, das Refresh Token zu löschen.</p>
+<h3 id="authorisierung-an-anderem-identity-provider">Authorisierung an anderem Identity Provider</h3>
+<p>Obgleich es so scheinen mag, dient OAuth selbst <em>nicht der Authentifizierung oder Authorisierung</em> sondern deren Deligierung. In welcher Form der Authorization Server Nutzer authentifiziert und die gewünschten Berechtigungen bestätigt ist nicht festgelegt. Grundsätzlich sind Nutzer und Berechtigungen bei einem Identity Provider (IdP) hinterlegt, der im einfachsten Fall aus einer Nutzerdatenbank besteht.</p>
+<p>Die Abfrage am IdP kann intern erfolgen:</p>
+<pre><code> +---------+                                          +---------------+
+ |         |---(1) client_id, redirect_uri &amp; scope --&gt;| Authorization |
+ | Browser |---(2) Nutzer meldet sich an ------------&gt;|   Server      |
+ |         |&lt;--(3) Authorization Code ----------------|               |
+ +---------+                                          +---------------+
+   ^   |                                                 | interne ^
+   |   v                                                 v Abfrage |
+ +--------+                                        +------------------+
+ | Client |                                        | Identiy Provider |
+ +--------+                                        +------------------+</code></pre>
+<p>Es ist aber denkbar, dass der Authorization Server den Nutzer direkt an den IdP weiterleitet, wo sich dieser die Anfrage bestätigt:</p>
+<pre><code> +---------+                                          +---------------+
+ |         |---(1) client_id, redirect_uri &amp; scope --&gt;| Authorization |
+ | Browser |&lt;--(3) Authorization Code ----------------|   Server      |
+ |         |--\                                       |               |
+ +---------+  |                                       +---------------+
+   ^   |      |                                          |    ^
+   |   |      |                                Redirect (1)  (3) OK + patron
+   |   v      |                                          v    | 
+ +--------+   |                                    +------------------+
+ | Client |   \--(2) Nutzer meldet sich an -------&gt;| Identiy Provider |
+ +--------+                                        +------------------+</code></pre>
+<p>Hierbei muss jedoch sichergestellt werden dass dem Authorization Server kein scheinbar vom IdP stammendes gefälschtes &quot;OK&quot; untergeschoben werden kann.</p>
 <h2 id="beispiel">Beispiel</h2>
 <p>Als Beispiel wird ein PAIA auth Server mit der Basis-URL <a href="https://paia.gbv.de/DE-Hil2/auth">https://paia.gbv.de/DE-Hil2/auth</a> und eine Anwendung mit der Basis-URL <a href="https://bibapp.de/notify/">https://bibapp.de/notify/</a> angenommen.</p>
 <h2 id="umsetzung">Umsetzung</h2>
@@ -222,7 +272,7 @@ grant_type=refresh_token
 </ul>
 <h2 id="siehe-auch">Siehe auch</h2>
 <ul>
-<li><p>Eine (noch komplexere) Alternative zu OAuth 2.0 ist SAML</p></li>
+<li><p>Eine (noch komplexere) Alternative zu OAuth 2.0 ist SAML (z.B. Shibboleth)</p></li>
 <li><a href="https://en.wikipedia.org/wiki/OpenID_Connect">Wikipedia zu OpenID Connect</a></li>
 <li><p>Heise-Artikel zu OpenID Connect: <a href="http://www.heise.de/developer/artikel/OpenID-Connect-Login-mit-OAuth-Teil-1-Grundlagen-2218446.html">Teil 1</a>, <a href="http://www.heise.de/developer/artikel/OpenID-Connect-Login-mit-OAuth-Teil-2-Identity-Federation-und-fortgeschrittene-Themen-2266017.html">Teil 2</a></p></li>
 </ul></div>
